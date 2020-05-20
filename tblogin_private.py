@@ -1,103 +1,141 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
-'''
-@author: diange.du
-@file: tblogin_private.py
-@time: 2020/3/30 15:08
-@desc: 个人账号- 模拟淘宝登录、获取登录cookies
-'''
 
 import requests
+from loguru import logger
 import re
 
-s = requests.session()
 
+class taobao(object):
+    def __init__(self, username, encrypt_psd, ua):
+        self.username = username
+        self.encrypt_psd = encrypt_psd
+        self.ua = ua
+        self.session = requests.Session()
 
-def login_taobao(TPL_username, TPL_password_2, ua):
-    try:
-        # 验证用户名密码
-        url = 'https://login.taobao.com/member/login.jhtml?redirectURL=https%3A%2F%2Fwww.taobao.com%2F'
-        headers ={
-            'content-length': '2931',
-            'cache-control': 'max-age=0',
-            'origin': 'https://login.taobao.com',
-            'upgrade-insecure-requests': '1',
-            'content-type': 'application/x-www-form-urlencoded',
-            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.132 Safari/537.36',
-            'sec-fetch-dest': 'document',
-            'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
-            'sec-fetch-site': 'same-origin',
-            'sec-fetch-mode': 'navigate',
-            'sec-fetch-user': '?1',
-            'referer': 'https://login.taobao.com/member/login.jhtml?redirectURL=https%3A%2F%2Fwww.taobao.com%2F',
-            'accept-encoding': 'gzip, deflate, br',
-            'accept-language': 'zh-CN,zh;q=0.9,en-GB;q=0.8,en;q=0.7'
-        }
+        self.check_url = 'https://login.taobao.com/newlogin/account/check.do?appName=taobao&fromSite=0'
+        self.login_url = 'https://login.taobao.com/newlogin/login.do?appName=taobao&fromSite=0'
+        self.my_info_url = 'https://i.taobao.com/my_taobao.htm'
+        self.timeout = 3
+
+    def login(self):
+        # 第一步，检查是否有滑块验证码
+        if not self.check_user():
+            logger.error('未通过淘宝的检查，请检查链接,用户名和ua值是否正确')
+            return
+        logger.info('检测正常，未需要验证码')
+
+        # 第二步，检查账号密码,获取申请st码地址
+        st_url = self.check_password()
+        if st_url.strip() == '':
+            logger.error('检查账号、密码和ua是否正确')
+            return
+        logger.info('获取申请st码地址成功,地址为：'+ st_url)
+
+        # 第三步，访问st码地址,获取cookie
+        self.apply_st(st_url)
+        logger.info('访问st地址正常')
+
+        # 第四步，获取昵称检查是否登录成功
+        nickname = self.get_nickname()
+        if nickname:
+            logger.info('登录成功，昵称为:' + nickname)
+        else:
+            logger.error('获取昵称失败')
+
+    def check_user(self):
         data = {
-            'TPL_username': TPL_username,
-            'ncoToken': '733a05f5289720af3c850c8a9f698f96bfe6cd6a',
-            'slideCodeShow': 'false',
-            'useMobile': 'false',
-            'lang': 'zh_CN',
-            'loginsite': 0,
-            'newlogin': 0,
-            'TPL_redirect_url': 'https://www.taobao.com/',
-            'from': 'tb',
-            'fc': 'default',
+            'loginId': self.username,
+            'ua': self.ua
+        }
+        res = self.session.post(self.check_url, data=data, timeout=self.timeout)
+        if res.status_code != 200:
+            return False
+        res_json = res.json()
+        if res_json['content']['data'].get('isCheckCodeShowed', 'False') == 'True':
+            return False
+        return True
+
+    def check_password(self):
+        header = {
+            'accept': 'application/json, text/plain, */*',
+            'accept-encoding': 'gzip, deflate, br',
+            'accept-language': 'zh-CN,zh;q=0.9,en;q=0.8,vi;q=0.7',
+            'content-type': 'application/x-www-form-urlencoded',
+            'referer': 'https://login.taobao.com/member/login.jhtml?spm=a21bo.2017.754894437.1.5af911d9vMNRvs&f=top&redirectURL=https%3A%2F%2Fwww.taobao.com%2F',
+            'sec-fetch-mode': 'cors',
+            'sec-fetch-site': 'same-origin',
+            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36'
+        }
+
+        data = {
+            'loginId': self.username,
+            'password2': self.encrypt_psd,
+            'keepLogin': 'true',
+            'ua': self.ua,
+            'umidGetStatusVal': '255',
+            'screenPixel': '1440x960',
+            'navlanguage': 'zh-CN',
+            'navUserAgent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36',
+            'navPlatform': 'Win32',
+            'appName': 'taobao',
+            'appEntrance': 'taobao_pc',
+            '_csrf_token': '6VM7C3lZN3dYnXX09GsPs3',
+            'umidToken': '4e8ef7f445e142345bccfa23d659b1e1b162f31b',
+            'hsiz': '1b33cd3c5f0c870bd15c6e7c43750f5f',
+            'bizParams': '',
             'style': 'default',
-            'keyLogin': 'false',
-            'qrLogin': 'true',
-            'newMini': 'false',
-            'newMini2': 'false',
-            'loginType': '3',
-            'gvfdcname': '10',
-            'gvfdcre': '68747470733A2F2F6C6F67696E2E74616F62616F2E636F6D2F6D656D6265722F6C6F676F75742E6A68746D6C3F73706D3D613231626F2E323031372E3735343839343433372E372E3561663931316439316D4B67474E26663D746F70266F75743D7472756526726564697265637455524C3D68747470732533412532462532467777772E74616F62616F2E636F6D253246',
-            'TPL_password_2': TPL_password_2,
-            'loginASR': '1',
-            'loginASRSuc': '1',
-            'oslanguage': 'zh-CN',
-            'sr': '1920*1080',
-            'naviVer': 'chrome|80.03987132',
-            'osACN': 'Mozilla',
-            'osAV': '5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.132 Safari/537.36',
-            'osPF': 'Win32',
             'appkey': '00000000',
-            'mobileLoginLink': 'https://login.taobao.com/member/login.jhtml?redirectURL=https://www.taobao.com/&useMobile=true',
-            'um_token': 'T9A70753FED4D5DF4D703E42AB46F3611ACAA6E6D8F86A7FE16ADEFE1FB',
-            'ua': ua
+            'from': 'tbTop',
+            'isMobile': 'false',
+            'lang': 'zh_CN',
+            'returnUrl': 'https://www.taobao.com/',
+            'fromSite': '0'
         }
-        response = s.post(url, headers=headers, data=data)
-        # 得到获取st码的网址
-        token_url = re.search('<script src="(.*?)"></script>', response.text).group(1)
+        res = self.session.post(self.login_url, data=data, headers=header)
+        res = res.json()
+        url = ''
+        try:
+            url = res['content']['data']['asyncUrls'][0]
+        except:
+            logger.error('获取st码url失败')
+        return url
 
-        # 获取st码
-        st_response = s.get(token_url)
-        st_code = re.search('"data":{"st":"(.*?)"}', st_response.text).group(1)
-
-        # 根据st码登陆帐户
-        headers = {
-            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.132 Safari/537.36',
-            'host': 'login.taobao.com'
+    def apply_st(self, st_url):
+        header = {
+            'accept': 'application/json, text/plain, */*',
+            'accept-encoding': 'gzip, deflate, br',
+            'accept-language': 'zh-CN,zh;q=0.9,en;q=0.8,vi;q=0.7',
+            'content-type': 'application/x-www-form-urlencoded',
+            'referer': 'https://login.taobao.com/member/login.jhtml?spm=a21bo.2017.754894437.1.5af911d9vMNRvs&f=top&redirectURL=https%3A%2F%2Fwww.taobao.com%2F',
+            'sec-fetch-mode': 'cors',
+            'sec-fetch-site': 'same-origin',
+            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36'
         }
-        login_url = f'https://login.taobao.com/member/vst.htm?st={st_code}'
-        login_res = s.get(login_url, headers=headers)
-        location_url = re.search('top.location.href = "(.*?)";', login_res.text).group(1)
+        self.session.get(st_url)
 
-        # 访问我的淘宝页面
-        headers = {
-            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.132 Safari/537.36'
+    def get_nickname(self):
+        header = {
+            'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
+            'accept-encoding': 'gzip, deflate, br',
+            'accept-language': 'zh-CN,zh;q=0.9,en;q=0.8,vi;q=0.7',
+            'sec-fetch-mode': 'navigate',
+            'sec-fetch-site': 'none',
+            'sec-fetch-user': '?1',
+            'upgrade-insecure-requests': '1',
+            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36'
         }
-        my_taobao = s.get(location_url, headers=headers)
-        name = re.search('<input id="mtb-nickname" type="hidden" value="(.*?)"/>', my_taobao.text).group(1)
-        if my_taobao.status_code == 200:
-            print(f'{name} 登陆成功！')
-    except Exception as e:
-        print('登陆失败！')
-        print(f'Error: {e}')
+        response = self.session.get(self.my_info_url, headers=header)
+        m = re.search(r'<input id="mtb-nickname" type="hidden" value="(.*?)"/>', response.text)
+        if m:
+            return m.group(1)
+        return ''
 
 
 if __name__ == '__main__':
-    TPL_username = ''
-    TPL_password_2 = ''
-    ua = '122#94D76DsqEExJCJpZMEpJEJponDJE7SNEEP7rEJ+/f9t/2oQLpo7iEDpWnDEeK51HpyGZp9hBuDEEJFOPpC76EJponDJL7gNpEPXZpJRgu4Ep+FQLpoGUEJLWn4yP7SQEEyuLpERnIQXNprzC2Tq+wLm6Lito3l6AgLfS9kydNiG6XUoiAj9jV9YiT8JsCsj2gIp42C3co9MlKhMgDqqv63uBqguPV9tv00slZ0mgXCHQ+jIvQRhypDWgePZxJtIHVQsPCzEps0LDqMfpxcWtzWbxYPjEELXAH/jqg5p1cC3D7W3bEEpxngR4eN/Yi+mr8Cp6+DPEyFfOefMOwzVanSbWuO5EELGA8oL6JNEEyBfDqMfbDEpCnSL1ul0EDLVr8CpUJzbEyF3mqW32E5pamMp1uOZWELXr8ytkalYEmtL9Rrsup5aDEgdD16ftM00vUd/kNIp20fa76ZOh69m7qXqC4PVjsoz/ckMzI2iM2pnNRpJXATO24D+kX3bGzgVNK+SbpmGDSdZfsF/AXTwuEjri1v5BdUrsyKhiNwfG0u8jvI0UjfQbTZH7IPZTpHYp1eZOeqyrtOKgup73pNPCd7C47HGt2lnduuD9g44RmTC4bBWz68V8WLYUdbk0QSFkRqBnY18YejQrR3KC45kxHbUpJtLFoxOnQAj57pUEEvFTjmYOoFbzxb4WTnfJwqwguyfzMsk9XufHllL1i6lCXkZHw+xnzaw4NSFKY7tqgQS3QllL7M+qzuXHjwRY7oV4RkMNcplUYc0ZiU200V2g3BKYv5//pxbzHwt3ArqZv5Ob+PG7sDAryJOCt3u7B+nlOAbT9LzCrZ66UkOtHEmCw7WpxDFg56+qN7cHULRsxrBTuP2OanLFGjtXHzPjJ6a4nsVU9Fs3t5dDMNoZeR3kSbhEXOud6fj2KD0SP6rWaMjPfyA4jdH9wshjL5AjhhEgHurcNz+NbbEX0DyGCF6xmzPcRHpADkSC'
-    login_taobao(TPL_username, TPL_password_2, ua)
+    # username改成自己的用户名，密码和ua从浏览器或抓包软件获取填入
+    username = ''
+    encrypt_psd = ''
+    ua = '123#lcQDbF6mtT5ugQbxlDnv8ldEzQXHO1A9926XYQledl/HzaHKDF8u/cqgsxIMrJOqvsyx9v0qgiWpmoExvoReQ0sfnZBKxpO5dPiuU1GZKNWMk4JeNjodGv1EGDYppGMXMFw2ClMB7OEPMrNRVQckiKRo1XvZFYyGfoBsb7LegzBJvojwi5OqrREYzBilTBEfqChqhzMOU+73J623vqnqWKPMYWtF/c9XMOjGZvyUerSGKOBigpHJaTKYGDU9Fj4ojlPW6TCcpoumpelej9WOhEqVSG3q3bETkfoefE+w/sZT3SBwlcB0dRzUkGn5uds3T9fD1xDTkvFnAhwmDJiX8+E+guOSaJCn0G9sFNRn630oqZrJ5By5GnAuJAdkKATJZeVKuvt2W/Psd+BXbU8ngySr+5agU+em3D9i/Pon4wXgXjyGm6ywtFUzqmvoTGEbszP3MGlyRLqPplY8wwTTd7EDe2GkfKAgmrLRc6SrdzYrTHWsRn04kb1rAFDSYZNbZvHwh9JHlToqBLd1FPqSEpjqo5bSxikHDuY1rRRP5oknvR+76rKlbhy6fDqqr497cz1iIczllmPEyDncTQjDhOh+XK9t8TbyYZcVedAGt9lX80HpSMdmEpBU5tO6l8bivx/JEM90vs5sEYMOZWr6ee8pckzgNA13g3neKWphHCMACyGYfjF7MJMYrs0X+HF9elVS1gdIULqTJFNgwXeRtWGN5RezqJBs8csTmuRPvWfZ+nrTiSzXXE/LKfnrsV20NAH1W83qRTwrQ8BVTIyK3Q7PmR8TAIuXvQtJkUguL53vsS+yCG+HHva4idvtQyz0PZRchFidlSrksfGvX88gQ7nZ3UTMIlHVn3ivKazKbgjrTcMX98nA2rxtxLaSFEftfxPB+uBBnEiXK97zmlIKlgCutqrsyZHq2O4uvVv7mh+U1mGP1ifuZ1xOJUoQr+Kg3RkfDQ3aGFQLtzra4x2Vc90='
+    tb = taobao(username=username, encrypt_psd=encrypt_psd, ua=ua)
+    tb.login()

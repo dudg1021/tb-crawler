@@ -1,9 +1,3 @@
-'''
-@author: diange.du
-@file: tblogin_private.py
-@time: 2020/3/30 15:08
-@desc: 个人账号- 模拟淘宝登录、获取登录cookies
-'''
 
 import time
 

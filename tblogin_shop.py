@@ -87,7 +87,7 @@ class taobaoLogin:
         # 激活umidtoken
         initial_url = "https://cf.aliyun.com/nocaptcha/initialize.jsonp?a=CF_APP_TBLogin_PC&t=" + self.form_data['umidToken'] + \
             "&scene=&lang=zh_CN&v=v1.2.17&href=https://login.taobao.com/member/login.jhtml&comm={}&callback=initializeJsonp_05827254062167628"
-        initial_resp = s.get(initial_url)
+        initial_resp = s.get(url=initial_url, headers=self.header)
         print(initial_resp.text)
         # self.form_data = {
         #     'loginId': self.username,
