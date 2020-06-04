@@ -126,8 +126,8 @@ def input_time_random():
 
 
 if __name__ == '__main__':
-    username = 'tb_du1021'  # 淘宝用户名
-    pwd = 'tuanche0401'  # 密码
+    username = ''  # 淘宝用户名
+    pwd = ''  # 密码
     url = 'https://login.taobao.com/member/login.jhtml?style=mini&css_style=b2b&from=b2b&full_redirect=true&redirect_url=https://login.1688.com/member/jump.htm?target=https://login.1688.com/member/marketSigninJump.htm?Done=http://login.1688.com/member/taobaoSellerLoginDispatch.htm&reg= http://member.1688.com/member/join/enterprise_join.htm?lead=http://login.1688.com/member/taobaoSellerLoginDispatch.htm&leadUrl=http://login.1688.com/member/'
     loop = asyncio.get_event_loop()  # 协程，开启个无限循环的程序流程，把一些函数注册到事件循环上。当满足事件发生的时候，调用相应的协程函数。
     loop.run_until_complete(main(username, pwd, url))  # 将协程注册到事件循环，并启动事件循环

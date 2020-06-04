@@ -76,12 +76,14 @@ useragents = [
     "Mozilla/5.0 (Linux; U; Android 1.6; en-us; SonyEricssonX10i Build/R1AA056) AppleWebKit/528.5  (KHTML, like Gecko) Version/3.1.2 Mobile Safari/525.20.1",
 ]
 
-
 import hashlib
+
+
 def get_sign(token, t, data):
     st = ("{}&{}&{}&{}").format(token, t, appKey, data)
     m = hashlib.md5(st.encode(encoding='utf-8')).hexdigest()
     return (m)
+
 
 appKey = '12574478'
 

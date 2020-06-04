@@ -4,7 +4,7 @@
 @author: diange.du
 @file: tblogin_shop.py
 @time: 2020/3/30 15:08
-@desc: 店铺账号- 模拟淘宝登录、获取登录cookies
+@desc: 店铺账号- 模拟淘宝登录、获取登录cookies  缺陷：店铺账号登录安全校验较高 需要更新umidtoken
 '''
 
 import re, json

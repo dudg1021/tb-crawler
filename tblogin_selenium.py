@@ -1,75 +1,108 @@
-
+#!/usr/bin/env python
+# -*- coding: UTF-8 -*-
+'''
+@author: diange.du
+@file: tblogin_selenium.py
+@time: 2020/6/3 16:50
+@desc: chromedriver方式登录
+'''
 import time
-
+from utils.config import *
+from utils.logutil import log
 from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support import expected_conditions
-from selenium.webdriver.support.ui import WebDriverWait
-
-"""
-运行前必须要做的事情：
-如果直接使用webdriver，不做任何修改的话，淘宝可以断定启动的浏览器是“机器人”，而不是“死的机器”。
-如果想让淘宝错误地认为启动的浏览器是"死的机器"，那么就需要修改webdriver。
-我使用的是chromedriver，"perl -pi -e 's/cdc_/dog_/g' /usr/local/bin/chromedriver"是修改chromedriver的代码，直接在Terminal执行即可。执行完在运行此脚本，则可以成功登录。
-这里我解释一下"perl -pi -e 's/cdc_/dog_/g' /usr/local/bin/chromedriver"，这段代码其实就是全局修改/usr/local/bin/chromedriver中的cdc_为dog_，"/usr/local/bin/chromedriver"是chromedriver所在的文件路径。
-感谢https://www.jianshu.com/p/368be2cc6ca1这篇文章的作者。
-"""
+from selenium.webdriver import ActionChains  # 动作链
 
 
-class TaobaoSpider:
+class TaoBaoLoginSelenium:
+    def __init__(self):
+        pass
 
-    def __init__(self, username, password):
-        chrome_options = webdriver.ChromeOptions()
-        # 不加载图片，加快访问速度
-        chrome_options.add_experimental_option("prefs", {"profile.managed_default_content_settings.images": 2})
-        # 设置为开发者模式，避免被识别
-        chrome_options.add_experimental_option('excludeSwitches', ['enable-automation'])
-        self.web_driver = webdriver.Chrome(options=chrome_options)
-        self.web_driver_wait = WebDriverWait(self.web_driver, 10)
+    def do_login(self, u_name, u_pwd):
+        # 为了防止你不确定自己的 chrom 版本，最好两个混合用
+        options = webdriver.ChromeOptions()
+        # chrom在79版之前用这个
+        options.add_experimental_option("excludeSwitches", ["enable-automation"])
+        options.add_experimental_option('useAutomationExtension', False)
+        # =>linux环境 为Chrome配置无头模式
+        # options.add_argument("--headless")
+        # options.add_argument('--no-sandbox')
+        # options.add_argument('--disable-gpu')
+        # options.add_argument('--disable-dev-shm-usage')
+        # 这个是更改 user-agent 的，可有可无
+        options.add_argument(
+            "user-agent=Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1; AcooBrowser; .NET CLR 1.1.4322; .NET CLR 2.0.50727)")
+        chrome = webdriver.Chrome(options=options)
+        # chrom在79版之后用这个
+        chrome.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
+            "source": """
+                    Object.defineProperty(navigator, 'webdriver', {
+                      get: () => undefined
+                    })
+                  """
+        })
+        log.info('step-1 打开登录页...')
+        chrome.get('https://login.taobao.com/member/login.jhtml?')  # 发送请求,打开淘宝登录地址
+        log.info('sleep 2秒等待网页加载...')
+        time.sleep(2)  # 等待加载,网络不好的话页面信息加载不出来,可以根据网速自行设定
 
-        self.url = 'https://login.taobao.com/member/login.jhtml'
-        self.username = username
-        self.password = password
+        username_input = chrome.find_element_by_id("fm-login-id")  # 获取用户名输入窗口
+        password_input = chrome.find_element_by_id("fm-login-password")  # 获取密码输入窗口
 
-    def login(self):
-        self.web_driver.get(self.url)
+        log.info('step-2 输入用户名密码...')
+        username_input.send_keys(u_name)  # 输入用户名
+        password_input.send_keys(u_pwd)  # 输入密码
+        log.info('sleep 2秒等待加载滑块...')
+        time.sleep(2)  # 等待加载,这里会加载滑块
+
+        log.info('step-3 获取并拖动滑块...')
+        slider = chrome.find_element_by_xpath("//*[@id='nc_1_n1z']")
+        action = ActionChains(chrome)  # 创建动作链
+        action.click_and_hold(slider)  # 模拟按住滑块不松开
         try:
-            # 切换为帐号密码登录
-            # login_method_switch = self.web_driver_wait.until(
-            #     expected_conditions.presence_of_element_located((By.XPATH, '//*[@id="J_QRCodeLogin"]/div[5]/a[1]')))
-            # login_method_switch.click()
+            action.move_by_offset(258, 0).perform()  # 拖动滑块到底,通过浏览器可以获取拖动的距离
+        except:
+            log.error("拖动滑块异常", exc_info=True)
+            pass
+        action.release()  # 释放动作链
+        log.info('拖动滑块后等待js校验...')
+        time.sleep(2)
+        # login_button = chrome.find_element_by_xpath(
+        #     "/html/body/div/div[2]/div[3]/div/div[1]/div/div[2]/div/form/div[4]/button")  # 获取登录按钮
+        # login_button.click()  # 点击登录
+        chrome.find_element_by_xpath('//*[@id="login-form"]/div[4]/button').click()
+        log.info('step-4 点击登录,sleep 10s 环境检测...')
+        # 等待登录检测和重定向
+        time.sleep(10)
+        html = chrome.page_source  # 获取登录后页面信息
+        # 重定向到导购后台取接口相关token
+        html = chrome.get(
+            'https://market.m.taobao.com/app/ulife/pc-guider-static/tb-live-data/index.html?spm=a1z9u.8142865.0.0.7e7434edeYvbrZ')
+        # 等待页面加载
+        time.sleep(5)
+        log.info('step-5 获取cookie...')
+        cookie_str = self.get_cookies(chrome)
+        # 关闭chromedriver
+        chrome.close()
+        return cookie_str
 
-            # 找到用户名输入框并输入
-            username_input = self.web_driver_wait.until(
-                expected_conditions.presence_of_element_located((By.ID, 'fm-login-id')))
-            username_input.send_keys(self.username)
-
-            # 找到密码输入框并输入
-            password_input = self.web_driver_wait.until(
-                expected_conditions.presence_of_element_located((By.ID, 'fm-login-password')))
-            password_input.send_keys(self.password)
-
-            # 找到登录按钮并点击
-            login_button = self.web_driver_wait.until(
-                expected_conditions.presence_of_element_located((By.XPATH, '//*[@class="password-login"]')))
-            login_button.click()
-
-            # 找到名字标签并打印内容
-            taobao_name_tag = self.web_driver_wait.until(expected_conditions.presence_of_element_located(
-                (By.XPATH, '//*[@id="J_Col_Main"]/div/div[1]/div/div[1]/div[1]/div/div[1]/a/em')))
-            print(f"登陆成功：{taobao_name_tag.text}")
-
-            # 休息5秒钟，然后关闭浏览器
-            time.sleep(5)
-            self.web_driver.close()
-        except Exception as e:
-            print(e)
-            self.web_driver.close()
-            print("登陆失败")
+    def get_cookies(self, chrome):
+        chrome_cookies = chrome.get_cookies()  # 获取cookies
+        print(chrome_cookies)
+        cookie_str = ''
+        cookie_dict = {}
+        for cookie in chrome_cookies:
+            cookie_str += '{}={};'.format(cookie['name'], cookie['value'])
+            cookie_dict[cookie['name']] = cookie['value']
+        log.info('cookie_str>>> '+cookie_str)
+        # print(cookie_dict)
+        return cookie_str
 
 
-if __name__ == "__main__":
-    username = ''
-    password = ''
-    spider = TaobaoSpider(username, password)
-    spider.login()
+def get_login_cookies():
+    log.info('do tb logining......')
+    tl = TaoBaoLoginSelenium()
+    return tl.do_login('', '')
+
+
+if __name__ == '__main__':
+    TaoBaoLoginSelenium().do_login('', '')

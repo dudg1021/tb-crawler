@@ -7,9 +7,9 @@ import re
 
 
 class taobao(object):
-    def __init__(self, username, encrypt_psd, ua):
-        self.username = username
-        self.encrypt_psd = encrypt_psd
+    def __init__(self, u_name, en_pwd, ua):
+        self.username = u_name
+        self.encrypt_psd = en_pwd
         self.ua = ua
         self.session = requests.Session()
 
@@ -134,8 +134,8 @@ class taobao(object):
 
 if __name__ == '__main__':
     # username改成自己的用户名，密码和ua从浏览器或抓包软件获取填入
-    username = ''
-    encrypt_psd = ''
+    u_name = ''
+    en_pwd = ''
     ua = '123#lcQDbF6mtT5ugQbxlDnv8ldEzQXHO1A9926XYQledl/HzaHKDF8u/cqgsxIMrJOqvsyx9v0qgiWpmoExvoReQ0sfnZBKxpO5dPiuU1GZKNWMk4JeNjodGv1EGDYppGMXMFw2ClMB7OEPMrNRVQckiKRo1XvZFYyGfoBsb7LegzBJvojwi5OqrREYzBilTBEfqChqhzMOU+73J623vqnqWKPMYWtF/c9XMOjGZvyUerSGKOBigpHJaTKYGDU9Fj4ojlPW6TCcpoumpelej9WOhEqVSG3q3bETkfoefE+w/sZT3SBwlcB0dRzUkGn5uds3T9fD1xDTkvFnAhwmDJiX8+E+guOSaJCn0G9sFNRn630oqZrJ5By5GnAuJAdkKATJZeVKuvt2W/Psd+BXbU8ngySr+5agU+em3D9i/Pon4wXgXjyGm6ywtFUzqmvoTGEbszP3MGlyRLqPplY8wwTTd7EDe2GkfKAgmrLRc6SrdzYrTHWsRn04kb1rAFDSYZNbZvHwh9JHlToqBLd1FPqSEpjqo5bSxikHDuY1rRRP5oknvR+76rKlbhy6fDqqr497cz1iIczllmPEyDncTQjDhOh+XK9t8TbyYZcVedAGt9lX80HpSMdmEpBU5tO6l8bivx/JEM90vs5sEYMOZWr6ee8pckzgNA13g3neKWphHCMACyGYfjF7MJMYrs0X+HF9elVS1gdIULqTJFNgwXeRtWGN5RezqJBs8csTmuRPvWfZ+nrTiSzXXE/LKfnrsV20NAH1W83qRTwrQ8BVTIyK3Q7PmR8TAIuXvQtJkUguL53vsS+yCG+HHva4idvtQyz0PZRchFidlSrksfGvX88gQ7nZ3UTMIlHVn3ivKazKbgjrTcMX98nA2rxtxLaSFEftfxPB+uBBnEiXK97zmlIKlgCutqrsyZHq2O4uvVv7mh+U1mGP1ifuZ1xOJUoQr+Kg3RkfDQ3aGFQLtzra4x2Vc90='
-    tb = taobao(username=username, encrypt_psd=encrypt_psd, ua=ua)
+    tb = taobao(u_name=u_name, en_pwd=en_pwd, ua=ua)
     tb.login()
