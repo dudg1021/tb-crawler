@@ -24,14 +24,14 @@ class TaoBaoLoginSelenium:
         options.add_experimental_option("excludeSwitches", ["enable-automation"])
         options.add_experimental_option('useAutomationExtension', False)
         # =>linux环境 为Chrome配置无头模式
-        # options.add_argument("--headless")
-        # options.add_argument('--no-sandbox')
-        # options.add_argument('--disable-gpu')
-        # options.add_argument('--disable-dev-shm-usage')
-        # 这个是更改 user-agent 的，可有可无
-        options.add_argument(
-            "user-agent=Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1; AcooBrowser; .NET CLR 1.1.4322; .NET CLR 2.0.50727)")
+        options.add_argument("--headless")
+        options.add_argument('--no-sandbox')
+        options.add_argument('--disable-gpu')
+        options.add_argument('--disable-dev-shm-usage')
         chrome = webdriver.Chrome(options=options)
+        # 设置窗口最大化防止滑块拖动异常
+        chrome.maximize_window()
+        # chrome.fullscreen_window()
         # chrom在79版之后用这个
         chrome.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
             "source": """
@@ -55,15 +55,15 @@ class TaoBaoLoginSelenium:
         time.sleep(2)  # 等待加载,这里会加载滑块
 
         log.info('step-3 获取并拖动滑块...')
-        slider = chrome.find_element_by_xpath("//*[@id='nc_1_n1z']")
-        action = ActionChains(chrome)  # 创建动作链
-        action.click_and_hold(slider)  # 模拟按住滑块不松开
         try:
-            action.move_by_offset(258, 0).perform()  # 拖动滑块到底,通过浏览器可以获取拖动的距离
+            slider = chrome.find_element_by_xpath("//span[contains(@class, 'btn_slide')]")
+            if slider.is_displayed():
+                action = ActionChains(chrome)  # 创建动作链
+                action.click_and_hold(on_element=slider).perform()
+                action.move_by_offset(xoffset=258, yoffset=0).perform()
+                action.pause(0.5).release().perform()
         except:
-            log.error("拖动滑块异常", exc_info=True)
             pass
-        action.release()  # 释放动作链
         log.info('拖动滑块后等待js校验...')
         time.sleep(2)
         # login_button = chrome.find_element_by_xpath(
@@ -74,9 +74,8 @@ class TaoBaoLoginSelenium:
         # 等待登录检测和重定向
         time.sleep(10)
         html = chrome.page_source  # 获取登录后页面信息
-        # 重定向到导购后台取接口相关token
-        html = chrome.get(
-            'https://market.m.taobao.com/app/ulife/pc-guider-static/tb-live-data/index.html?spm=a1z9u.8142865.0.0.7e7434edeYvbrZ')
+        # 重定向到指定url取接口相关token
+        # html = chrome.get('http://....')
         # 等待页面加载
         time.sleep(5)
         log.info('step-5 获取cookie...')
@@ -87,21 +86,20 @@ class TaoBaoLoginSelenium:
 
     def get_cookies(self, chrome):
         chrome_cookies = chrome.get_cookies()  # 获取cookies
-        print(chrome_cookies)
+        # print(chrome_cookies)
         cookie_str = ''
         cookie_dict = {}
         for cookie in chrome_cookies:
             cookie_str += '{}={};'.format(cookie['name'], cookie['value'])
             cookie_dict[cookie['name']] = cookie['value']
         log.info('cookie_str>>> '+cookie_str)
-        # print(cookie_dict)
+        print(cookie_dict)
         return cookie_str
 
 
 def get_login_cookies():
     log.info('do tb logining......')
-    tl = TaoBaoLoginSelenium()
-    return tl.do_login('', '')
+    return TaoBaoLoginSelenium().do_login('', '')
 
 
 if __name__ == '__main__':
