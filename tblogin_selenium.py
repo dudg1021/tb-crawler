@@ -4,7 +4,13 @@
 @author: diange.du
 @file: tblogin_selenium.py
 @time: 2020/6/3 16:50
-@desc: chromedriver方式登录
+@desc: chromedriver方式登录   对于存储在二级域名下的cookie 提取之前先跳转对应域名的url!!!
+重要，重要，重要！！！
+chromedriver.exe 修改内部$cdc..字符串
+修改方法：
+win平台下可以使用notepad++来打开，直接修改，然后关闭保存就好了。
+这里把“$cdc_asdjflasutopfhvcZLmcfl_”更改为“$chr_fajfjafjasifjsiaSsdjdl_”。
+linus平台可用vim来进行修改。
 '''
 import time
 from utils.config import *
@@ -24,10 +30,10 @@ class TaoBaoLoginSelenium:
         options.add_experimental_option("excludeSwitches", ["enable-automation"])
         options.add_experimental_option('useAutomationExtension', False)
         # =>linux环境 为Chrome配置无头模式
-        options.add_argument("--headless")
-        options.add_argument('--no-sandbox')
-        options.add_argument('--disable-gpu')
-        options.add_argument('--disable-dev-shm-usage')
+        # options.add_argument("--headless")
+        # options.add_argument('--no-sandbox')
+        # options.add_argument('--disable-gpu')
+        # options.add_argument('--disable-dev-shm-usage')
         chrome = webdriver.Chrome(options=options)
         # 设置窗口最大化防止滑块拖动异常
         chrome.maximize_window()

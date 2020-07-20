@@ -30,4 +30,7 @@ def detail():
 
 
 if __name__ == '__main__':
-    app.run(threaded=True)
+    # 设置ip,端口
+    app.run(host='172.16.3.37',
+            port=5000,
+            threaded=True)
